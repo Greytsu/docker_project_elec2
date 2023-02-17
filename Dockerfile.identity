@@ -23,6 +23,5 @@ RUN dotnet publish Services/Identity.Api/Identity.Api.csproj -c Release -o /app/
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "/app/Identity.Api.dll"]
 
-# CMD [ "ls" ]
+ENTRYPOINT ["dotnet", "/app/Identity.Api.dll"]

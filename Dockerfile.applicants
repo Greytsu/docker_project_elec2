@@ -23,4 +23,8 @@ RUN dotnet publish Services/Applicants.Api/applicants.api.csproj -c Release -o /
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+RUN mv applicants.api.dll app.dll
+RUN mv applicants.api.pdb app.pdb
+
 ENTRYPOINT ["dotnet", "/app/applicants.api.dll"]
