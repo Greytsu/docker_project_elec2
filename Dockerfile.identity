@@ -1,0 +1,28 @@
+# BASE--------------------------------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/core/aspnet:2.1-stretch-slim AS base
+LABEL author=Greytsu
+LABEL name=identity
+WORKDIR /app
+EXPOSE 80 443
+
+# BUILD-------------------------------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/core/sdk:2.1-stretch AS build
+WORKDIR /src
+
+COPY ./Services ./Services
+COPY ./Foundation/Events ./Foundation/Events
+
+RUN dotnet restore Services/Identity.Api/Identity.Api.csproj
+RUN dotnet build Services/Identity.Api/Identity.Api.csproj -c Release -o /app/build
+
+# PUBLISH-----------------------------------------------------------------------------
+FROM build AS publish 
+RUN dotnet publish Services/Identity.Api/Identity.Api.csproj -c Release -o /app/publish
+
+# FINAL-------------------------------------------------------------------------------
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "/app/Identity.Api.dll"]
+
+# CMD [ "ls" ]

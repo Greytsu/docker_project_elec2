@@ -9,6 +9,5 @@ ENV ACCEPT_EULA=Y
 ENV MSSQL_SA_PASSWORD=Pass@word
 
 EXPOSE 1433
-VOLUME sqlserver
 
 CMD /bin/bash ./entrypoint.sh

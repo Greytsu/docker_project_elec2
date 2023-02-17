@@ -1,0 +1,118 @@
+version: "3.9"
+
+networks:
+  mssql-network:
+  redis-network:
+  rabbitmq-network:
+  web-network:
+
+volumes:
+  mssql-volume:
+
+services:
+  database:
+    build:
+      context: Database
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      - mssql-volume:/var/opt/mssql
+    networks:
+      - mssql-network
+
+  user.data:
+    image: redis
+    ports:
+      - 6379:6379
+    networks:
+      - redis-network
+    restart: always
+    depends_on:
+      - database
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+      - rabbitmq-network
+    ports:
+      - 15672:15672
+      - 5672:5672
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      database:
+        condition: service_started
+
+  service-api-applicants:
+    build:
+      context: .
+      dockerfile: Dockerfile.applicants
+    environment:
+      ConnectionString: "Server=database;User=sa;Password=Pass@word;Database=dotnetgigs.applicants;"
+      HostRabbitmq: rabbitmq
+    networks:
+      - mssql-network
+      - redis-network
+      - rabbitmq-network
+      - web-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - 8081:80
+
+  service-api-jobs:
+    build:
+      context: .
+      dockerfile: Dockerfile.jobs
+    environment:
+      ConnectionString: "Server=database;User=sa;Password=Pass@word;Database=dotnetgigs.jobs;"
+      HostRabbitmq: rabbitmq
+    networks:
+      - mssql-network
+      - redis-network
+      - rabbitmq-network
+      - web-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - 8082:80
+
+  service-api-identity:
+    build:
+      context: .
+      dockerfile: Dockerfile.identity
+    environment:
+      RedisHost: user.data:6379
+      HostRabbitmq: rabbitmq
+    networks:
+      - mssql-network
+      - redis-network
+      - rabbitmq-network
+      - web-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - 8083:80
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    networks:
+      - web-network
+    depends_on:
+      - database
+      - user.data
+      - rabbitmq
+      - service-api-applicants
+      - service-api-identity
+      - service-api-jobs
+    ports:
+      - 80:80
+    restart: always
